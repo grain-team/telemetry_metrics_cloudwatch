@@ -10,6 +10,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     :last_run,
     :push_interval,
     :sample_rate,
+    :default_storage_resolution,
     counters: %{},
     sums: %{},
     last_values: %{},
@@ -18,7 +19,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
 
   require Logger
 
-  alias Telemetry.Metrics.{Counter, LastValue, Sum, Summary}
+  alias Telemetry.Metrics.{Counter, Distribution, LastValue, Sum, Summary}
   alias __MODULE__
 
   # the only valid units are: Seconds, Microseconds, Milliseconds, Bytes, Kilobytes,
@@ -90,7 +91,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     Map.put(cache, :last_values, lvs)
   end
 
-  defp coalesce(%Cache{summaries: summaries} = cache, %Summary{} = metric, measurement, tags) do
+  defp coalesce(%Cache{summaries: summaries} = cache, %mod{} = metric, measurement, tags)
+       when mod in [Summary, Distribution] do
     summaries = Map.update(summaries, {metric, tags}, [measurement], &(&1 ++ [measurement]))
     Map.put(cache, :summaries, summaries)
   end
@@ -147,15 +149,6 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     |> Enum.take(10)
   end
 
-  def validate_metrics([]), do: nil
-
-  def validate_metrics([head | rest]) do
-    unless Enum.member?([Counter, Summary, LastValue, Sum], head.__struct__),
-      do: Logger.warning("#{head.__struct__} is not supported by the Reporter #{__MODULE__}")
-
-    validate_metrics(rest)
-  end
-
   def pop_metrics(cache),
     do: Enum.reduce(@metric_names, {cache, []}, &pop/2)
 
@@ -169,7 +162,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
           values: measurements,
           dimensions: tags,
           unit: get_unit(metric.unit),
-          storage_resolution: get_storage_resolution(metric.reporter_options)
+          storage_resolution:
+            get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
         ]
       end)
 
@@ -186,7 +180,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
           value: measurement,
           dimensions: tags,
           unit: "Count",
-          storage_resolution: get_storage_resolution(metric.reporter_options)
+          storage_resolution:
+            get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
         ]
       end)
 
@@ -203,7 +198,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
           value: measurement,
           dimensions: tags,
           unit: get_unit(metric.unit),
-          storage_resolution: get_storage_resolution(metric.reporter_options)
+          storage_resolution:
+            get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
         ]
       end)
 
@@ -220,7 +216,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
           value: measurement,
           dimensions: tags,
           unit: get_unit(metric.unit),
-          storage_resolution: get_storage_resolution(metric.reporter_options)
+          storage_resolution:
+            get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
         ]
       end)
 
@@ -238,8 +235,8 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     end
   end
 
-  defp get_storage_resolution(reporter_options) do
-    case Keyword.get(reporter_options, :storage_resolution, :standard) do
+  defp get_storage_resolution(reporter_options, default) do
+    case Keyword.get(reporter_options, :storage_resolution, default || :standard) do
       :high ->
         1
 

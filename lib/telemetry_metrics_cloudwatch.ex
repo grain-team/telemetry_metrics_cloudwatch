@@ -123,20 +123,20 @@ defmodule TelemetryMetricsCloudwatch do
       opts[:metrics] ||
         raise ArgumentError, "the :metrics option is required by #{inspect(__MODULE__)}"
 
-    Cache.validate_metrics(metrics)
     namespace = Keyword.get(opts, :namespace, "Telemetry")
     push_interval = Keyword.get(opts, :push_interval, 60_000)
     sample_rate = Keyword.get(opts, :sample_rate, 1.0)
+    default_storage_resolution = Keyword.get(opts, :default_storage_resolution, :standard)
 
     GenServer.start_link(
       __MODULE__,
-      {metrics, namespace, push_interval, sample_rate},
+      {metrics, namespace, push_interval, sample_rate, default_storage_resolution},
       server_opts
     )
   end
 
   @impl true
-  def init({metrics, namespace, push_interval, sample_rate}) do
+  def init({metrics, namespace, push_interval, sample_rate, default_storage_resolution}) do
     Process.flag(:trap_exit, true)
     groups = Enum.group_by(metrics, & &1.event_name)
 
@@ -150,7 +150,8 @@ defmodule TelemetryMetricsCloudwatch do
       namespace: namespace,
       last_run: System.monotonic_time(:second),
       push_interval: push_interval,
-      sample_rate: sample_rate
+      sample_rate: sample_rate,
+      default_storage_resolution: default_storage_resolution
     }
 
     schedule_push_check(state)
