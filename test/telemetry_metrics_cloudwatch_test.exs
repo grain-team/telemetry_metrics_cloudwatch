@@ -67,8 +67,8 @@ defmodule TelemetryMetricsCloudwatchTest do
       assert metrics |> Keyword.get(:dimensions) |> Keyword.equal?(target_dimensions)
     end
 
-    test "should be able to handle more than 10 tags" do
-      keys = ~w(a b c d e f g h i j k l m n o p)a
+    test "should be able to handle more than 30 tags" do
+      keys = ~w(a b c d e f g h i j k l m n o p q r s t u v w x y z aa ab ac ad ae af ag ah)a
       tvalues = Enum.into(keys, %{}, &{&1, "value"})
 
       counter =
@@ -84,13 +84,16 @@ defmodule TelemetryMetricsCloudwatchTest do
 
       {_postcache, [metrics]} = Cache.pop_metrics(cache)
 
-      assert metrics == [
+      assert [
                metric_name: "aname.value.count",
                value: 1,
-               dimensions: Enum.take(tvalues, 10),
+               dimensions: dimensions,
                unit: "Count",
                storage_resolution: 60
-             ]
+             ] = metrics
+
+      assert 30 == length(dimensions)
+      assert Enum.each(dimensions, fn {k, v} -> k in keys end)
     end
   end
 

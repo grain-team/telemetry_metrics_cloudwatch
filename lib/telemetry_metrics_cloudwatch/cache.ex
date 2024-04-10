@@ -11,6 +11,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     :push_interval,
     :sample_rate,
     :default_storage_resolution,
+    global_tags: [],
     counters: %{},
     sums: %{},
     last_values: %{},
@@ -161,7 +162,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
         [
           metric_name: extract_string_name(metric) <> ".summary",
           values: measurements,
-          dimensions: tags,
+          dimensions: Keyword.merge(cache.global_tags, tags),
           unit: get_unit(metric.unit),
           storage_resolution:
             get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
@@ -179,7 +180,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
         [
           metric_name: extract_string_name(metric) <> ".count",
           value: measurement,
-          dimensions: tags,
+          dimensions: Keyword.merge(cache.global_tags, tags),
           unit: "Count",
           storage_resolution:
             get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
@@ -197,7 +198,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
         [
           metric_name: extract_string_name(metric) <> ".sum",
           value: measurement,
-          dimensions: tags,
+          dimensions: Keyword.merge(cache.global_tags, tags),
           unit: get_unit(metric.unit),
           storage_resolution:
             get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
@@ -215,7 +216,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
         [
           metric_name: extract_string_name(metric) <> ".last_value",
           value: measurement,
-          dimensions: tags,
+          dimensions: Keyword.merge(cache.global_tags, tags),
           unit: get_unit(metric.unit),
           storage_resolution:
             get_storage_resolution(metric.reporter_options, cache.default_storage_resolution)
