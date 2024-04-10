@@ -30,7 +30,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
   @metric_names ~w(summaries counters last_values sums)a
 
   def push_measurement(cache, measurements, metadata, metric) do
-    measurement = extract_measurement(metric, measurements)
+    measurement = extract_measurement(metric, measurements, metadata)
     tags = extract_tags(metric, metadata)
 
     cond do
@@ -123,9 +123,10 @@ defmodule TelemetryMetricsCloudwatch.Cache do
   defp extract_string_name(%{name: name}),
     do: Enum.map_join(name, ".", &to_string/1)
 
-  defp extract_measurement(metric, measurements) do
+  defp extract_measurement(metric, measurements, metadata) do
     case metric.measurement do
       fun when is_function(fun, 1) -> fun.(measurements)
+      fun when is_function(fun, 2) -> fun.(measurements, metadata)
       key -> measurements[key]
     end
   end
@@ -146,7 +147,7 @@ defmodule TelemetryMetricsCloudwatch.Cache do
     |> Map.take(metric.tags)
     |> Enum.into([], fn {k, v} -> {k, to_string(v)} end)
     |> Enum.filter(fn {_k, v} -> String.length(v) > 0 end)
-    |> Enum.take(10)
+    |> Enum.take(30)
   end
 
   def pop_metrics(cache),
