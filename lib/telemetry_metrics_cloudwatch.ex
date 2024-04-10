@@ -203,7 +203,7 @@ defmodule TelemetryMetricsCloudwatch do
       metric_age >= push_interval and metric_count > 0 ->
         push(state)
 
-      metric_count == 20 ->
+      metric_count == 1000 ->
         push(state)
 
       Cache.max_values_per_metric(state) == 150 ->
